@@ -11,6 +11,9 @@ BL = "board_late.txt"
 BM = "board_mid.txt"
 
 
+
+
+
 """
 This is going to load in the board from the txt file and clear a single space if full
 """
@@ -59,13 +62,11 @@ def parse_move(move_string):
 
 
 def print_board(board):
-    # print column headers (top)
     print("  ", end="")
     for col in range(SIZE):
         print(f" {chr(ord('A') + col)}", end="")
     print()
     
-    # print each row with row numbers on left
     for row in range(SIZE):
         row_num = SIZE - row
         print(f"{row_num} ", end="")
@@ -245,6 +246,113 @@ def find_valid_move(board):
                         return format_move(start_coord, end_coord)
     
     return None  # no valid moves found
+
+def evaluate_tile_mobility_signed(board, player):
+    """
+    Returns an 8x8 matrix:
+    - Your pieces: positive move count
+    - Opponent pieces: negative move count
+    - Empty: 0
+    """
+    mobility_matrix = [[0 for _ in range(SIZE)] for _ in range(SIZE)]
+    opponent = WHITE if player == BLACK else BLACK
+
+    directions = [
+        (-2, 0), (-4, 0), (-6, 0),  # up
+        (2, 0), (4, 0), (6, 0),     # down
+        (0, -2), (0, -4), (0, -6),  # left
+        (0, 2), (0, 4), (0, 6)      # right
+    ]
+
+    for row in range(SIZE):
+        for col in range(SIZE):
+            piece = board[row][col]
+            if piece == EMPTY:
+                mobility_matrix[row][col] = 0
+            elif piece == player or piece == opponent:
+                move_count = 0
+                for row_offset, col_offset in directions:
+                    end_row = row + row_offset
+                    end_col = col + col_offset
+                    global PLAYER
+                    old_player = PLAYER
+                    PLAYER = piece
+                    if is_valid_move(board, row, col, end_row, end_col):
+                        move_count += 1
+                    PLAYER = old_player
+                if piece == player:
+                    mobility_matrix[row][col] = move_count
+                else:
+                    mobility_matrix[row][col] = -move_count
+    return mobility_matrix
+
+def get_all_move_evaluations(board, player):
+    """
+    For each possible move for the player, generate the resulting board,
+    call evaluate_tile_mobility_signed, and store:
+      - 'move': move string
+      - 'start': (row, col)
+      - 'end': (row, col)
+      - 'eval_sum': sum of evaluation matrix after move
+    Returns a list of dicts, one per possible move.
+    """
+    moves = []
+    directions = [
+        (-2, 0), (-4, 0), (-6, 0),  # up
+        (2, 0), (4, 0), (6, 0),     # down
+        (0, -2), (0, -4), (0, -6),  # left
+        (0, 2), (0, 4), (0, 6)      # right
+    ]
+    opponent = WHITE if player == BLACK else BLACK
+    for row in range(SIZE):
+        for col in range(SIZE):
+            if board[row][col] == player:
+                start_coord = index_to_coord(row, col)
+                for row_offset, col_offset in directions:
+                    end_row = row + row_offset
+                    end_col = col + col_offset
+                    global PLAYER
+                    old_player = PLAYER
+                    PLAYER = player
+                    if is_valid_move(board, row, col, end_row, end_col):
+                        end_coord = index_to_coord(end_row, end_col)
+                        move_str = format_move(start_coord, end_coord)
+                        # Make a deep copy of the board and apply the move
+                        board_copy = [r[:] for r in board]
+                        move_piece(board_copy, move_str)
+                        # Evaluate the resulting board
+                        eval_matrix = evaluate_tile_mobility_signed(board_copy, player)
+                        eval_sum = sum(val for rowm in eval_matrix for val in rowm)
+                        # Now, generate all possible opponent replies from this board state
+                        replies = []
+                        for opp_row in range(SIZE):
+                            for opp_col in range(SIZE):
+                                if board_copy[opp_row][opp_col] == opponent:
+                                    opp_start = index_to_coord(opp_row, opp_col)
+                                    for opp_row_offset, opp_col_offset in directions:
+                                        opp_end_row = opp_row + opp_row_offset
+                                        opp_end_col = opp_col + opp_col_offset
+                                        PLAYER = opponent
+                                        if is_valid_move(board_copy, opp_row, opp_col, opp_end_row, opp_end_col):
+                                            opp_end = index_to_coord(opp_end_row, opp_end_col)
+                                            opp_move_str = format_move(opp_start, opp_end)
+                                            replies.append({
+                                                'move': opp_move_str,
+                                                'start': (opp_row, opp_col),
+                                                'end': (opp_end_row, opp_end_col)
+                                            })
+                        PLAYER = old_player
+                        moves.append({
+                            'move': move_str,
+                            'start': (row, col),
+                            'end': (end_row, end_col),
+                            'eval_sum': eval_sum,
+                            'replies': replies
+                        })
+                    PLAYER = old_player
+    return moves
+
+
 def find_move_test():
     board = load_board(BE)
     print_board(board)
@@ -253,6 +361,8 @@ def find_move_test():
     print(move + "\n")
     move_piece(board, move)
     print_board(board)
+    
+
 
 def state1():
     board = load_board(BE)
@@ -261,18 +371,22 @@ def state1():
 def state2():
     board = load_board(BM)
     print_board(board)
-    print("-----------------------------------------------------------")
-    #valid move
-    cord = move_piece(board, "A8 -> C8")
     
-    # move_piece(board, "A7", "C7")
-    print(cord)
-    print_board(board)
+    # Evaluate ALL pieces (both BLACK and WHITE)
+    moves = get_all_move_evaluations(board, PLAYER)
+    print(moves)
+    
+    print("\n" + "--------------------------------------"+ "\n")
+   
+    # print_board(eval_all)
+    
+    # Calculate totals
+
         
 def main():
     # state1()
-    # state2()
-    find_move_test()
+    state2()
+    #find_move_test()
     
     
     
