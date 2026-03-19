@@ -514,7 +514,6 @@ def main():
 
         my_move = choose_move(board, player)
         if my_move is None:
-            print("", flush=True)
             break
 
         print(my_move, flush=True)
