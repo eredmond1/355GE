@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+import sys
 
 BLACK = 'B'
 WHITE = 'W'
@@ -24,7 +26,7 @@ def load_board(filename):
             line = line.strip()
             if line:
                 board.append(list(line))
-    board = remove_center_if_full(board)
+    #board = remove_center_if_full(board)
     return board
 
 
@@ -48,17 +50,23 @@ def index_to_coord(row, col):
 Start and end strings to single move string
 """
 def format_move(start, end):
-    return f"{start} -> {end}"
+    return f"{start}-{end}"
 
 
 """
 Single move string to start and end string
 """
 def parse_move(move_string):
-    parts = move_string.split(" -> ")
-    start = parts[0]
-    end = parts[1]
-    return start, end
+    # parts = move_string.split(" -> ")
+    # start = parts[0]
+    # end = parts[1]
+    # return start, end
+    move_string = move_string.strip()
+    if "-" in move_string:
+        start, end = move_string.split("-")
+        return start, end
+    else:
+        return move_string, None
 
 
 def print_board(board):
@@ -82,20 +90,42 @@ this checks if a baord is full and will remove peace
 This is only going to be run when the boards is read in from the file 
 """
 #TODO: This is going to need to be changed to the correct possition
-def remove_center_if_full(board):
+# def remove_center_if_full(board):
+#     for row in range(SIZE):
+#         for col in range(SIZE):
+#             if board[row][col] == EMPTY:
+#                 return board  
+    
+    
+#     center_row = SIZE // 2
+#     center_col = SIZE // 2
+#     board[center_row][center_col] = EMPTY
+#     print("TRIGGERED")
+    
+#     return board
+def is_board_full(board):
     for row in range(SIZE):
         for col in range(SIZE):
             if board[row][col] == EMPTY:
-                return board  
-    
-    
-    center_row = SIZE // 2
-    center_col = SIZE // 2
-    board[center_row][center_col] = EMPTY
-    print("TRIGGERED")
-    
-    return board
+                return False
+    return True
 
+
+def count_empty(board):
+    total = 0
+    for row in range(SIZE):
+        for col in range(SIZE):
+            if board[row][col] == EMPTY:
+                total += 1
+    return total
+
+
+def apply_removal_move(board, coord):
+    row, col = coord_to_index(coord)
+    if board[row][col] == EMPTY:
+        return False
+    board[row][col] = EMPTY
+    return True
 
 """
 This is going to check to make sure a move is valid
@@ -107,7 +137,7 @@ CHECKS
     - checks the make sure moves are vertical or horizontal
     - checks to make sure we are jumping over a opponent peace
 """
-def is_valid_move(board, start_row, start_col, end_row, end_col):
+def is_valid_move(board, start_row, start_col, end_row, end_col, player):
     # check if coordinates are within bounds
     if (start_row, start_col) not in VALID_POSITIONS:
         return False
@@ -116,7 +146,7 @@ def is_valid_move(board, start_row, start_col, end_row, end_col):
     
     # check if start has a piece and end is empty
     piece = board[start_row][start_col]
-    if piece != PLAYER:
+    if piece != player:
         return False
     if piece == EMPTY:
         return False
@@ -167,6 +197,48 @@ def is_valid_move(board, start_row, start_col, end_row, end_col):
     
     return True
 
+"""
+This handles the first and second move of the game where a piece is removed instead of moved
+    - Default is to take "D5" piece if going first
+    - Driver is strict and second piece must also be one of the 4 center pieces
+""" 
+def find_opening_move(board, player):
+    center_stones = ["D5", "E5", "D4", "E4"]
+
+    # first move: full board
+    if is_board_full(board):
+        if player == BLACK:
+            return "D5"
+        else:
+            return "E5"
+
+    # second move: exactly one empty square
+    if count_empty(board) == 1:
+        empty_coord = None
+
+        for row in range(SIZE):
+            for col in range(SIZE):
+                if board[row][col] == EMPTY:
+                    empty_coord = index_to_coord(row, col)
+
+        # allowed responses based on which center stone was removed first
+        if empty_coord == "D5":
+            candidates = ["E5", "D4"]
+        elif empty_coord == "E5":
+            candidates = ["D5", "E4"]
+        elif empty_coord == "D4":
+            candidates = ["D5", "E4"]
+        elif empty_coord == "E4":
+            candidates = ["E5", "D4"]
+        else:
+            candidates = []
+
+        for coord in candidates:
+            row, col = coord_to_index(coord)
+            if board[row][col] == player:
+                return coord
+
+    return None
 
 """
 This is going to take board, starting and ending positions
@@ -175,13 +247,20 @@ This is going to take board, starting and ending positions
             iterating over only that distance and removing things in the middle
     - if this is a invalid move it will not make the move
 """
-def move_piece(board, move):
+def move_piece(board, move, player):
     start, end = parse_move(move)
+
+    # opening removal move support
+    if end is None:
+        if apply_removal_move(board, start):
+            return start
+        return None
+    
     start_row, start_col = coord_to_index(start)
     end_row, end_col = coord_to_index(end)
     
     # validate the move first
-    if not is_valid_move(board, start_row, start_col, end_row, end_col):
+    if not is_valid_move(board, start_row, start_col, end_row, end_col, player):
         print("Invalid move")
         return None
 
@@ -241,7 +320,7 @@ def find_valid_move(board):
                     end_col = col + col_offset
                     
                     # check if this move is valid
-                    if is_valid_move(board, row, col, end_row, end_col):
+                    if is_valid_move(board, row, col, end_row, end_col, PLAYER):
                         end_coord = index_to_coord(end_row, end_col)
                         return format_move(start_coord, end_coord)
     
@@ -319,7 +398,7 @@ def get_all_move_evaluations(board, player):
                         move_str = format_move(start_coord, end_coord)
                         # Make a deep copy of the board and apply the move
                         board_copy = [r[:] for r in board]
-                        move_piece(board_copy, move_str)
+                        move_piece(board_copy, move_str, player)
                         # Evaluate the resulting board
                         eval_matrix = evaluate_tile_mobility_signed(board_copy, player)
                         eval_sum = sum(val for rowm in eval_matrix for val in rowm)
@@ -353,14 +432,14 @@ def get_all_move_evaluations(board, player):
     return moves
 
 
-def find_move_test():
-    board = load_board(BE)
-    print_board(board)
-    print("\n" + "--------------------------------------"+ "\n")
-    move = find_valid_move(board)
-    print(move + "\n")
-    move_piece(board, move)
-    print_board(board)
+# def find_move_test():
+#     board = load_board(BE)
+#     print_board(board)
+#     print("\n" + "--------------------------------------"+ "\n")
+#     move = find_valid_move(board)
+#     print(move + "\n")
+#     move_piece(board, move)
+#     print_board(board)
     
 
 
@@ -382,11 +461,65 @@ def state2():
     
     # Calculate totals
 
-        
+def convert_move_format(move):
+    start, end = parse_move(move)
+    return f"{start}-{end}"
+
+def choose_move(board, player):
+    opening_move = find_opening_move(board, player)
+    if opening_move is not None:
+        return opening_move
+
+    global PLAYER
+    PLAYER = player
+    return find_valid_move(board)
+      
 def main():
     # state1()
-    state2()
+    #state2()
     #find_move_test()
+
+    # check for correct arguments
+    if len(sys.argv) != 3:
+        return
+    
+    board_file = sys.argv[1]
+    player = sys.argv[2]
+
+    global PLAYER
+    PLAYER = player
+
+    # load board
+    board = load_board(board_file)
+
+    my_move = choose_move(board, player)
+    if my_move is None:
+        print("", flush=True)
+        return
+
+    print(my_move, flush=True)
+    move_piece(board, my_move, player)
+
+    while True:
+        try:
+            opponent_move = input().strip()
+        except EOFError:
+            break
+
+        if not opponent_move:
+            break
+
+        opponent = WHITE if player == BLACK else BLACK    
+        move_piece(board, opponent_move, opponent)
+
+        my_move = choose_move(board, player)
+        if my_move is None:
+            break
+
+        print(my_move, flush=True)
+        move_piece(board, my_move, player)
+
+    
     
     
     
