@@ -356,7 +356,7 @@ def evaluate_tile_mobility_signed(board, player):
                     global PLAYER
                     old_player = PLAYER
                     PLAYER = piece
-                    if is_valid_move(board, row, col, end_row, end_col):
+                    if is_valid_move(board, row, col, end_row, end_col, piece):  # pass piece directly
                         move_count += 1
                     PLAYER = old_player
                 if piece == player:
@@ -393,7 +393,7 @@ def get_all_move_evaluations(board, player):
                     global PLAYER
                     old_player = PLAYER
                     PLAYER = player
-                    if is_valid_move(board, row, col, end_row, end_col):
+                    if is_valid_move(board, row, col, end_row, end_col, player):
                         end_coord = index_to_coord(end_row, end_col)
                         move_str = format_move(start_coord, end_coord)
                         # Make a deep copy of the board and apply the move
@@ -412,7 +412,7 @@ def get_all_move_evaluations(board, player):
                                         opp_end_row = opp_row + opp_row_offset
                                         opp_end_col = opp_col + opp_col_offset
                                         PLAYER = opponent
-                                        if is_valid_move(board_copy, opp_row, opp_col, opp_end_row, opp_end_col):
+                                        if is_valid_move(board_copy, opp_row, opp_col, opp_end_row, opp_end_col, opponent):
                                             opp_end = index_to_coord(opp_end_row, opp_end_col)
                                             opp_move_str = format_move(opp_start, opp_end)
                                             replies.append({
@@ -431,6 +431,82 @@ def get_all_move_evaluations(board, player):
                     PLAYER = old_player
     return moves
 
+def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, player):
+    """
+    Runs alpha-beta pruning on the move list from get_all_move_evaluations.
+    Returns (best_move_string, best_score).
+    """
+    opponent = WHITE if player == BLACK else BLACK
+
+    if not moves:
+        score = float('-inf') if is_maximizing else float('inf')
+        return None, score
+
+    best_move = None
+
+    if is_maximizing:
+        best_val = float('-inf')
+        for entry in moves:
+            score = entry['eval_sum']
+
+            # Go deeper using the opponent's replies if we can
+            if depth > 1 and entry['replies']:
+                board_copy = [r[:] for r in board]
+                move_piece(board_copy, entry['move'], player)
+                opp_moves = get_all_move_evaluations(board_copy, opponent)
+                _, score = alphabeta_on_evaluations(
+                    opp_moves, depth - 1, alpha, beta, False, board_copy, player
+                )
+
+            if score > best_val:
+                best_val = score
+                best_move = entry['move']
+
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                break  # prune
+
+        return best_move, best_val
+
+    else:
+        best_val = float('inf')
+        for entry in moves:
+            score = entry['eval_sum']
+
+            if depth > 1 and entry['replies']:
+                board_copy = [r[:] for r in board]
+                move_piece(board_copy, entry['move'], opponent)
+                our_moves = get_all_move_evaluations(board_copy, player)
+                _, score = alphabeta_on_evaluations(
+                    our_moves, depth - 1, alpha, beta, True, board_copy, player
+                )
+
+            if score < best_val:
+                best_val = score
+                best_move = entry['move']
+
+            beta = min(beta, score)
+            if beta <= alpha:
+                break  # prune
+
+        return best_move, best_val
+
+
+def find_best_move(board, player):
+    """Calls get_all_move_evaluations then picks the best move via alpha-beta."""
+    moves = get_all_move_evaluations(board, player)
+    if not moves:
+        return None
+    best_move, _ = alphabeta_on_evaluations(
+        moves,
+        depth=2,
+        alpha=float('-inf'),
+        beta=float('inf'),
+        is_maximizing=True,
+        board=board,
+        player=player
+    )
+    return best_move
 
 # def find_move_test():
 #     board = load_board(BE)
@@ -472,7 +548,7 @@ def choose_move(board, player):
 
     global PLAYER
     PLAYER = player
-    return find_valid_move(board)
+    return find_best_move(board, player)  #  was find_valid_move(board)
       
 def main():
     # state1()
