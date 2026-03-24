@@ -1,5 +1,14 @@
+# --- Weighted Evaluation Function ---
+def evaluate_board_weighted(board, player, w_mob=0.4, w_safe=0.4, w_center=0.2):
+    mobility_matrix = evaluate_tile_mobility_signed(board, player)
+    mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
+    safety_matrix = evaluate_tile_safety(board, player)
+    safety_score = sum(val for rowm in safety_matrix for val in rowm)
+    center_score = evaluate_center_control(board, player)
+    return w_mob * mobility_score + w_safe * safety_score + w_center * center_score
 #!/usr/bin/env python3
 import sys
+import time
 
 BLACK = 'B'
 WHITE = 'W'
@@ -400,8 +409,7 @@ def get_all_move_evaluations(board, player):
                         board_copy = [r[:] for r in board]
                         move_piece(board_copy, move_str, player)
                         # Evaluate the resulting board
-                        eval_matrix = evaluate_tile_mobility_signed(board_copy, player)
-                        eval_sum = sum(val for rowm in eval_matrix for val in rowm)
+                        eval_sum = evaluate_board_weighted(board_copy, player)
                         # Now, generate all possible opponent replies from this board state
                         replies = []
                         for opp_row in range(SIZE):
@@ -435,8 +443,17 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
     """
     Runs alpha-beta pruning on the move list from get_all_move_evaluations.
     Returns (best_move_string, best_score).
+    Supports a timeout: if time.time() - start_time > time_limit, returns best move so far.
     """
+    # Use globals for timing
+    global _ALPHABETA_START_TIME, _ALPHABETA_TIME_LIMIT, _ALPHABETA_TIMEOUT
     opponent = WHITE if player == BLACK else BLACK
+
+    # Check for timeout
+    if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
+        if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+            _ALPHABETA_TIMEOUT = True
+            return None, float('-inf') if is_maximizing else float('inf')
 
     if not moves:
         score = float('-inf') if is_maximizing else float('inf')
@@ -447,6 +464,11 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
     if is_maximizing:
         best_val = float('-inf')
         for entry in moves:
+            # Check for timeout at each iteration
+            if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
+                if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+                    _ALPHABETA_TIMEOUT = True
+                    break
             score = entry['eval_sum']
 
             # Go deeper using the opponent's replies if we can
@@ -457,6 +479,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
                 _, score = alphabeta_on_evaluations(
                     opp_moves, depth - 1, alpha, beta, False, board_copy, player
                 )
+                # If timeout, break
+                if '_ALPHABETA_TIMEOUT' in globals() and _ALPHABETA_TIMEOUT:
+                    break
 
             if score > best_val:
                 best_val = score
@@ -471,6 +496,11 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
     else:
         best_val = float('inf')
         for entry in moves:
+            # Check for timeout at each iteration
+            if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
+                if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+                    _ALPHABETA_TIMEOUT = True
+                    break
             score = entry['eval_sum']
 
             if depth > 1 and entry['replies']:
@@ -480,6 +510,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
                 _, score = alphabeta_on_evaluations(
                     our_moves, depth - 1, alpha, beta, True, board_copy, player
                 )
+                # If timeout, break
+                if '_ALPHABETA_TIMEOUT' in globals() and _ALPHABETA_TIMEOUT:
+                    break
 
             if score < best_val:
                 best_val = score
@@ -497,16 +530,94 @@ def find_best_move(board, player):
     moves = get_all_move_evaluations(board, player)
     if not moves:
         return None
-    best_move, _ = alphabeta_on_evaluations(
-        moves,
-        depth=2,
-        alpha=float('-inf'),
-        beta=float('inf'),
-        is_maximizing=True,
-        board=board,
-        player=player
-    )
+    # Set up timing globals
+    global _ALPHABETA_START_TIME, _ALPHABETA_TIME_LIMIT, _ALPHABETA_TIMEOUT
+    _ALPHABETA_START_TIME = time.time()
+    _ALPHABETA_TIME_LIMIT = 10.0  # seconds
+    _ALPHABETA_TIMEOUT = False
+    best_move = None
+    best_val = float('-inf')
+    try:
+        best_move, best_val = alphabeta_on_evaluations(
+            moves,
+            depth=5,
+            alpha=float('-inf'),
+            beta=float('inf'),
+            is_maximizing=True,
+            board=board,
+            player=player
+        )
+    except Exception:
+        pass
+    # If timeout, best_move may be None; fallback to first move
+    if best_move is None and moves:
+        best_move = moves[0]['move']
     return best_move
+
+def evaluate_tile_safety(board, player):
+    """
+    Returns an 8x8 matrix:
+    - Your pieces: positive if not capturable in one move, negative if capturable
+    - Opponent pieces: negative if not capturable, positive if capturable
+    - Empty: 0
+    """
+    safety_matrix = [[0 for _ in range(SIZE)] for _ in range(SIZE)]
+    opponent = WHITE if player == BLACK else BLACK
+    directions = [
+        (-2, 0), (-4, 0), (-6, 0),  # up
+        (2, 0), (4, 0), (6, 0),     # down
+        (0, -2), (0, -4), (0, -6),  # left
+        (0, 2), (0, 4), (0, 6)      # right
+    ]
+    for row in range(SIZE):
+        for col in range(SIZE):
+            piece = board[row][col]
+            if piece == EMPTY:
+                safety_matrix[row][col] = 0
+            elif piece == player or piece == opponent:
+                # Assume unsafe until proven safe
+                safe = 1
+                for row_offset, col_offset in directions:
+                    end_row = row + row_offset
+                    end_col = col + col_offset
+                    global PLAYER
+                    old_player = PLAYER
+                    PLAYER = opponent if piece == player else player
+                    # If opponent can jump here, it's unsafe
+                    if is_valid_move(board, end_row, end_col, row, col, PLAYER):
+                        safe = 0
+                    PLAYER = old_player
+                if piece == player:
+                    safety_matrix[row][col] = safe
+                else:
+                    safety_matrix[row][col] = -safe
+    return safety_matrix
+
+def evaluate_center_control(board, player):
+    """
+    Returns a single score: number of player's pieces in the 4 center squares minus opponent's.
+    """
+    center_coords = [(3, 3), (3, 4), (4, 3), (4, 4)]  # D4, D5, E4, E5 (0-indexed)
+    player_count = 0
+    opponent = WHITE if player == BLACK else BLACK
+    opponent_count = 0
+    for row, col in center_coords:
+        if board[row][col] == player:
+            player_count += 1
+        elif board[row][col] == opponent:
+            opponent_count += 1
+    return player_count - opponent_count
+
+def evaluate_board_average(board, player):
+    """
+    Returns the average of mobility, safety, and center control scores.
+    """
+    mobility_matrix = evaluate_tile_mobility_signed(board, player)
+    mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
+    safety_matrix = evaluate_tile_safety(board, player)
+    safety_score = sum(val for rowm in safety_matrix for val in rowm)
+    center_score = evaluate_center_control(board, player)
+    return (mobility_score + safety_score + center_score) / 3
 
 # def find_move_test():
 #     board = load_board(BE)
@@ -567,6 +678,7 @@ def main():
 
     # load board
     board = load_board(board_file)
+    print_board(board )
 
     my_move = choose_move(board, player)
     if my_move is None:
