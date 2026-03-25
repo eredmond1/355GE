@@ -1,12 +1,5 @@
-# --- Weighted Evaluation Function ---
-def evaluate_board_weighted(board, player, w_mob=0.4, w_safe=0.4, w_center=0.2):
-    mobility_matrix = evaluate_tile_mobility_signed(board, player)
-    mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
-    safety_matrix = evaluate_tile_safety(board, player)
-    safety_score = sum(val for rowm in safety_matrix for val in rowm)
-    center_score = evaluate_center_control(board, player)
-    return w_mob * mobility_score + w_safe * safety_score + w_center * center_score
 #!/usr/bin/env python3
+
 import sys
 import time
 
@@ -608,16 +601,24 @@ def evaluate_center_control(board, player):
             opponent_count += 1
     return player_count - opponent_count
 
-def evaluate_board_average(board, player):
-    """
-    Returns the average of mobility, safety, and center control scores.
-    """
+# def evaluate_board_average(board, player):
+#     """
+#     Returns the average of mobility, safety, and center control scores.
+#     """
+#     mobility_matrix = evaluate_tile_mobility_signed(board, player)
+#     mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
+#     safety_matrix = evaluate_tile_safety(board, player)
+#     safety_score = sum(val for rowm in safety_matrix for val in rowm)
+#     center_score = evaluate_center_control(board, player)
+#     return (mobility_score + safety_score + center_score) / 3
+
+def evaluate_board_weighted(board, player, w_mob=0.4, w_safe=0.4, w_center=0.2):
     mobility_matrix = evaluate_tile_mobility_signed(board, player)
     mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
     safety_matrix = evaluate_tile_safety(board, player)
     safety_score = sum(val for rowm in safety_matrix for val in rowm)
     center_score = evaluate_center_control(board, player)
-    return (mobility_score + safety_score + center_score) / 3
+    return w_mob * mobility_score + w_safe * safety_score + w_center * center_score
 
 # def find_move_test():
 #     board = load_board(BE)
@@ -636,7 +637,7 @@ def state1():
     
 def state2():
     board = load_board(BM)
-    print_board(board)
+    # print_board(board)
     
     # Evaluate ALL pieces (both BLACK and WHITE)
     moves = get_all_move_evaluations(board, PLAYER)
@@ -678,7 +679,7 @@ def main():
 
     # load board
     board = load_board(board_file)
-    print_board(board )
+    # print_board(board )
 
     my_move = choose_move(board, player)
     if my_move is None:
