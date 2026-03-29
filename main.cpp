@@ -7,14 +7,25 @@
 
 // Standard libraries
 #include <iostream>
-#include<string>
-#include<fstream>
-#include<vector>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <set>
+#include <utility>
+#include <typeinfo>
 
 using namespace std;
 
 // Global variables
-string player;
+char BLACK = 'B';
+char WHITE = 'W';
+char EMPTY = 'O'; // use whatever matches the board/checker
+int SIZE = 8;
+set<pair<int, int>> VALID_POSITIONS;
+string PLAYER = "B";
+string BE = "board_early.txt";
+string BL = "board_late.txt";
+string BM = "board_mid.txt";
 
 /*
  * Loads Koane board from text file into a vector of character vectors.
@@ -49,7 +60,7 @@ vector<vector<char>> load_board(string filename){
 bool is_board_full(vector<vector<char>> board){
 	for(const auto& row : board){
 		for(const auto& col : row){
-			if(col == 'O'){
+			if(col == EMPTY){
 				return false;
 			}
 		}
@@ -76,17 +87,29 @@ string find_opening_move(vector<vector<char>> board, string player){
 	}
 }
 /*
-WHAT choose_move(vector<vector<char>> board, string player){
+string choose_move(vector<vector<char>> board, string player){
 	string opening_move = find_opening_move(board, player);
+	if(opening_move != nullptr){
+		return opening_move;
+	}
 }	
 */
 int main(int argc, char* argv[]) {
+	// Quick population of VALID_POSITIONS
+	for(int r = 0; r < SIZE; ++r){
+		for(int c = 0; c < SIZE; ++c){
+			VALID_POSITIONS.insert({r, c});
+		}
+	}
+
 	if(argc != 3){
 		cerr << "Invalid argument count. argc = " << argc << "." << endl; 
 	}
 
 	string board_file = argv[1];
-	player = argv[2];
+	string player = argv[2];
+
+	PLAYER = player;
 
 	vector<vector<char>>board = load_board(board_file);
 
@@ -103,9 +126,12 @@ int main(int argc, char* argv[]) {
 	bool isFull = is_board_full(board);
 	cout << "Is the board full? " << isFull << endl; 
 	*/
+	// Testing opening move
 	string o = find_opening_move(board, player);
 	cout << "Opening move: " << o << endl;
-	//WHAT my_move = choose_move(board, player);
+	cout << "Type of move: " << typeid(o).name() << endl;
+	
+	//string my_move = choose_move(board, player);
 
 	return 0;	
 }
