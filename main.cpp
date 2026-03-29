@@ -97,6 +97,20 @@ string format_move(string start, string end){
 }
 
 /*
+ * Parses first coordinate from move string
+ * Param: move_string
+ */
+string parse_move_start(string move_string){
+	size_t pos = move_string.find('-');
+
+	if(pos == npos){
+		return move_string;
+	}else{
+		return move_string.substr(0, pos);
+	}
+}
+
+/*
  * Checks every position on board to check that there are no empty pieces
  * Param: board - A 2D vector of characters representing board pieces
  * Return: True is board is full, false if at least one piece is missing
@@ -293,6 +307,13 @@ string find_opening_move(vector<vector<char>> board, string player){
 	return NONE_STR;
 }
 
+/*
+ *
+ */
+WHAT move_piece(vector<vector<char> board, string move, string player){
+	
+}
+
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	/*
 	 * For each possible move for the player, generate a resulting board,
@@ -323,6 +344,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 				int end_col;
 				string end_coord;
 				string move_str;
+				vector<vector<char>> board_copy;
 				for(const auto& direction : directions) {
 					row_offset = direction.first;
 					col_offset = direction.second;
@@ -332,7 +354,9 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 					PLAYER = player;
 					if(is_valid_move(board, row, col, end_row, end_col, player)){
 						end_coord = index_to_coord(end_row, end_col);
-						move_str = 	
+						move_str = format_move(start_coord, end_coord);
+						board_copy = board;
+
 					}
 				}
 			}
