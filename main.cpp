@@ -26,6 +26,7 @@ string PLAYER = "B";
 string BE = "board_early.txt";
 string BL = "board_late.txt";
 string BM = "board_mid.txt";
+string NONE = "None";
 
 /*
  * Loads Koane board from text file into a vector of character vectors.
@@ -85,15 +86,31 @@ string find_opening_move(vector<vector<char>> board, string player){
 			return "E5";
 		}
 	}
+	return NONE;
 }
 /*
+string find_best_move(vector<vector<char>> board, string player){
+
+}
+*/
+/*
+ * Calls functions to pick a move depending if board is empty or not
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ * Return: String representing coordinate of piece to move
+ */
 string choose_move(vector<vector<char>> board, string player){
 	string opening_move = find_opening_move(board, player);
-	if(opening_move != nullptr){
+	// Not returning one of the opening moves returns a mangled string
+	if(opening_move != NONE){
 		return opening_move;
 	}
+
+	PLAYER = player;
+	return "TBA";
+	//return find_best_move(board, player);
 }	
-*/
+
 int main(int argc, char* argv[]) {
 	// Quick population of VALID_POSITIONS
 	for(int r = 0; r < SIZE; ++r){
@@ -125,13 +142,14 @@ int main(int argc, char* argv[]) {
 	// Testing for is_board_full
 	bool isFull = is_board_full(board);
 	cout << "Is the board full? " << isFull << endl; 
-	*/
+
 	// Testing opening move
 	string o = find_opening_move(board, player);
 	cout << "Opening move: " << o << endl;
 	cout << "Type of move: " << typeid(o).name() << endl;
-	
-	//string my_move = choose_move(board, player);
+	*/
+	string my_move = choose_move(board, player);
+	cout << "Move: " << my_move << endl;
 
 	return 0;	
 }
