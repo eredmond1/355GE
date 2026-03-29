@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <utility>
+#include <cctype>
 #include <typeinfo> // Remove at end
 
 using namespace std;
@@ -26,7 +27,7 @@ string PLAYER = "B";
 string BE = "board_early.txt";
 string BL = "board_late.txt";
 string BM = "board_mid.txt";
-string NONE = "None";
+string NONE_STR = "None";
 
 /*
  * Loads Koane board from text file into a vector of character vectors.
@@ -54,6 +55,37 @@ vector<vector<char>> load_board(string filename){
 }
 
 /*
+ * Acquire row index value from chess coordinates
+ * Param: coord - String representing chess coordinates
+ * Return: Index of row value for 2D vector
+ */
+int coord_to_index_row(string coord){
+	int convert = coord[1];
+	convert = convert - 48;
+	return SIZE - convert;
+}
+
+/*
+ * Acquire column index value from chess coordinates
+ * Param: coord - String representing chess coordinates
+ * Return: Index of col value for 2D vector
+ */
+int coord_to_index_col(string coord){
+	return toupper(coord[0]) - 'A';
+}
+
+/*
+ * Takes a pair of index values can convert to chess coordinates
+ * Params: row, col
+ * Return: String representing chess board coordinates
+ */
+string index_to_coord(int row, int col){
+	char letter = 'A' + col;
+	string number = to_string(SIZE - row);
+	return string(1, letter) + number;
+}
+
+/*
  * Checks every position on board to check that there are no empty pieces
  * Param: board - A 2D vector of characters representing board pieces
  * Return: True is board is full, false if at least one piece is missing
@@ -69,6 +101,11 @@ bool is_board_full(vector<vector<char>> board){
 	return true;
 }
 
+/*
+ * Counts the number of empty positions on the board
+ * Param: board - A 2D vector of characters representing board pieces
+ * Return: Integer number of 'empty' positions
+ */
 int count_empty(vector<vector<char>> board){
 	int total = 0;
 
@@ -100,8 +137,45 @@ string find_opening_move(vector<vector<char>> board, string player){
 		}
 	}
 	// Second move: exactly one empty square
+	
+	int count = count_empty(board);
 
-	return NONE;
+	if(count == 1){
+		string empty_coord = NONE_STR;
+
+		for(int row = 0; row < SIZE; ++row){
+			for(int col = 0; col < SIZE; ++col){
+				if(board[row][col] == EMPTY){
+					empty_coord = index_to_coord(row, col);
+				}
+			}
+		}
+		// Allowed responses based on which center stone was removed first
+		string candidates[2];
+		int candid_count = 0;
+
+		if(empty_coord == "D5" || empty_coord == "E4"){
+			candidates[0] = "E5";	
+			candidates[1] = "D4";	
+			candid_count = 2;
+		} else if(empty_coord == "E5" || empty_coord == "D4"){
+			candidates[0] = "D5";	
+			candidates[1] = "E4";	
+			candid_count = 2;
+		}
+		if(candid_count != 0){
+			for(int i = 0; i < candid_count; ++i){
+				int r = coord_to_index_row(candidates[i]);
+				int c = coord_to_index_col(candidates[i]);
+				if(board[r][c] == player[0]){
+					return candidates[i];
+				}
+				
+			}
+		}
+	}
+	
+	return NONE_STR;
 }
 /*
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
@@ -124,13 +198,14 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	}
 	char opponent = WHITE if(player == BLACK) else BLACK;
 
-	for(int row = 0; row < SIZE; ++row){
-		for(int col = 0; col < SIZE; ++row){
-			if(board[row][col] == player){
-				//Current pos
+	for(const auto& row : board){
+		for(const auto& col : row){
+			if(col){
+				// Current pos
 			}
 		}
 	}
+	
 }
 
 string find_best_move(vector<vector<char>> board, string player){
@@ -146,7 +221,7 @@ string find_best_move(vector<vector<char>> board, string player){
 string choose_move(vector<vector<char>> board, string player){
 	string opening_move = find_opening_move(board, player);
 	// Not returning one of the opening moves returns a mangled string
-	if(opening_move != NONE){
+	if(opening_move != NONE_STR){
 		return opening_move;
 	}
 
@@ -186,18 +261,28 @@ int main(int argc, char* argv[]) {
 	// Testing for is_board_full
 	bool isFull = is_board_full(board);
 	cout << "Is the board full? " << isFull << endl; 
-
+	*/
 	// Testing opening move
 	string o = find_opening_move(board, player);
 	cout << "Opening move: " << o << endl;
-	cout << "Type of move: " << typeid(o).name() << endl;
-	
+	//cout << "Type of move: " << typeid(o).name() << endl;
+	/*
 	string my_move = choose_move(board, player);
 	cout << "Move: " << my_move << endl;
-	*/
-
+	
 	//Testing count_empty
 	int count = count_empty(board);
 	cout << "Count: " << count << endl;
+	
+	// Testing coord conversion
+	string coord;
+	for(int row = 0; row < SIZE; ++row){
+		for(int col = 0; col < SIZE; ++col){
+			coord = index_to_coord(row, col);
+			cout << coord << " ";
+		}
+		cout << endl;
+	}
+	*/
 	return 0;	
 }
