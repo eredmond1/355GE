@@ -12,7 +12,7 @@
 #include <vector>
 #include <set>
 #include <utility>
-#include <typeinfo>
+#include <typeinfo> // Remove at end
 
 using namespace std;
 
@@ -88,11 +88,40 @@ string find_opening_move(vector<vector<char>> board, string player){
 	}
 	return NONE;
 }
-/*
-string find_best_move(vector<vector<char>> board, string player){
 
+WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
+	/*
+	 * For each possible move for the player, generate a resulting board,
+	 * call evaluate_tile_mobility_signed, and store:
+	 *   - 'move': move string
+	 *   - 'start': (row, col)
+	 *   - 'end': (row, col)
+	 *   'eval_sum': sum of evaluation matrix after move
+	 * Returns a list of dicts, one per possible move.
+	 */
+	
+	vec moves;
+	vector<pair<int, int>> directions = {
+		{-2, 0}, {-4, 0}, {-6, 0},
+		{2, 0}, {4, 0}, {6, 0},
+		{0, -2}, {0, -4}, {0, -6},
+		{0, 2}, {0, 4}, {0, 6}
+	}
+	char opponent = WHITE if(player == BLACK) else BLACK;
+
+	for(int row = 0; row < SIZE; ++row){
+		for(int col = 0; col < SIZE; ++row){
+			if(board[row][col] == player){
+				//Current pos
+			}
+		}
+	}
 }
-*/
+
+string find_best_move(vector<vector<char>> board, string player){
+	moves = get_all_move_evaluations(board, player);
+}
+
 /*
  * Calls functions to pick a move depending if board is empty or not
  * Params: board - A 2D vector of characters representing board pieces
