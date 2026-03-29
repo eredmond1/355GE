@@ -41,6 +41,11 @@ vector<vector<char>> load_board(string filename){
 	return board;
 }
 
+/*
+ * Checks every position on board to check that there are no empty pieces
+ * Param: board - A 2D vector of characters representing board pieces
+ * Return: True is board is full, false if at least one piece is missing
+ */
 bool is_board_full(vector<vector<char>> board){
 	for(const auto& row : board){
 		for(const auto& col : row){
@@ -51,18 +56,28 @@ bool is_board_full(vector<vector<char>> board){
 	}
 	return true;
 }
+
 /*
-WHAT find_opening_move(vector<vector<char>> board, string player){
+ * Selects an opening move for black or white player given a full board
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ * Return: String representing opening move position for black or white
+ */
+string find_opening_move(vector<vector<char>> board, string player){
 	vector<string> center_stones = {"D5", "E5", "D4", "E4"};
 
 	// First move: full board
 	if(is_board_full(board)){
-
+		if(player == "BLACK"){
+			return "D5";
+		} else {
+			return "E5";
+		}
 	}
 }
-
+/*
 WHAT choose_move(vector<vector<char>> board, string player){
-	WHAT opening_move = find_opening_move(board, player);
+	string opening_move = find_opening_move(board, player);
 }	
 */
 int main(int argc, char* argv[]) {
@@ -83,8 +98,13 @@ int main(int argc, char* argv[]) {
 		cout << endl;
 	}
 
+	/*
+	// Testing for is_board_full
 	bool isFull = is_board_full(board);
 	cout << "Is the board full? " << isFull << endl; 
+	*/
+	string o = find_opening_move(board, player);
+	cout << "Opening move: " << o << endl;
 	//WHAT my_move = choose_move(board, player);
 
 	return 0;	
