@@ -681,32 +681,59 @@ def main():
     board = load_board(board_file)
     # print_board(board )
 
+
+    # Track number of opening removals (first two moves are removals)
+    opening_removals = 0
+
     my_move = choose_move(board, player)
+    # Check if this is an opening removal (removal moves have no '-')
+    if my_move is not None and '-' not in my_move:
+        opening_removals += 1
     if my_move is None:
-        print("", flush=True)
-        return
+        print("you win", flush=True)
+        sys.exit(0)
 
     print(my_move, flush=True)
     move_piece(board, my_move, player)
 
+
     while True:
-        try:
-            opponent_move = input().strip()
-        except EOFError:
-            break
+        while True:
+            try:
+                opponent_move = input()
+            except EOFError:
+                sys.exit(0)
 
-        if not opponent_move:
-            break
+            if not opponent_move:
+                sys.exit(0)
 
-        opponent = WHITE if player == BLACK else BLACK    
-        move_piece(board, opponent_move, opponent)
+            if opponent_move.strip() == "you win":
+                sys.exit(0)
 
-        my_move = choose_move(board, player)
-        if my_move is None:
-            break
+            opponent = WHITE if player == BLACK else BLACK
+            move_piece(board, opponent_move, opponent)
 
-        print(my_move, flush=True)
-        move_piece(board, my_move, player)
+            # Check if opponent's move was an opening removal
+            if '-' not in opponent_move:
+                opening_removals += 1
+
+            # Only check for valid moves after both opening removals are done
+            if opening_removals >= 2:
+                pass  # ...existing code...
+
+            my_move = choose_move(board, player)
+            # If still in opening phase, allow removal moves
+            if my_move is not None and opening_removals < 2 and '-' not in my_move:
+                opening_removals += 1
+            elif my_move is None:
+                print("you win", flush=True)
+                sys.exit(0)
+
+            print(my_move, flush=True)
+            move_piece(board, my_move, player)
+
+        # print(my_move, flush=True)
+        # move_piece(board, my_move, player)
 
     
     
