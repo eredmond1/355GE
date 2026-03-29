@@ -13,6 +13,7 @@
 #include <set>
 #include <utility>
 #include <cctype>
+#include <cstdlib>
 #include <typeinfo> // Remove at end
 
 using namespace std;
@@ -86,6 +87,16 @@ string index_to_coord(int row, int col){
 }
 
 /*
+ * Formats start and end strings to single move string
+ * Params: start - Starting coordinate string
+ *         end - Ending coordinate string
+ * Return: Concatenate the two strings with a hyphen
+ */
+string format_move(string start, string end){
+	return start + "-" + end;
+}
+
+/*
  * Checks every position on board to check that there are no empty pieces
  * Param: board - A 2D vector of characters representing board pieces
  * Return: True is board is full, false if at least one piece is missing
@@ -117,6 +128,110 @@ int count_empty(vector<vector<char>> board){
 		}
 	}
 	return total;
+}
+
+/*
+ * Determines if a certain move is valid
+ * Params: board - A 2D vector of characters representing board
+ *         start_row - Starting row value of piece to move
+ *         start_col - Starting column value of piece to move
+ *         end_row - Row value to move piece to
+ *         end_col - Column value to move piece to
+ *         player - String representing player color
+ */
+bool is_valid_move(vector<vecor<char>> board, int start_row, int start_col, int end_row, int end_col, string player){
+	// Check if coordinates within bounds
+	pair<int, int> start_coords = <start_row, start_col>;
+	pair<int, int> end_coords = <end_row, end_col>;
+	bool valid = false;
+
+	for(const auto& p : v){
+		if(p == start_coords){
+			valid = true;
+			break;
+		}
+	}
+
+	for(const auto& p : v){
+		if(p == end_coords){
+			valid = true;
+			break;
+		}
+	}
+
+	if(!valid){
+		return false;
+	}
+
+	// Check if start has a piece and end is empty
+	char piece = board[start_row][start_col];
+
+	if(piece != player[0]){
+		return false;
+	}
+	if(piece == EMPTY){
+		return false;
+	}
+	if(board[end_row][end_col] != EMPTY){
+		return false;
+	}
+
+	// Must move in a straight line (horizontal or vertical)
+	int row_diff = end_row - start_row;
+	int col_diff = end_col - start_col;
+
+	if(row_diff != 0 && col_diff != 0){
+		return false; // diagonal move not allowed
+	}
+	if(row_diff == 0 && col_diff == 0){
+		return false; // no movement
+	}
+
+	int distance;
+	int direction;
+	// Determine direction and distance
+	if(row_diff != 0){
+		// Vertical move
+		distance = abs(row_diff);
+		direction = 1 if row_diff > 0 else -1;
+		// Check all positions between start and end
+		int check_row;
+		for(int i = 1; i < distance; ++i){
+			check_row = start_row + (i * direction);
+			if((i % 2) == 1){ // odd positions should have opponent pieces
+				if(board[check_row][start_col] == EMPTY || board[check_row][start_col] == piece){
+					return false;
+				}
+			}else{ // even positions should be empty
+				if(board[check_row][start_col] != EMPTY){
+					return false;
+				}
+			}	
+		}
+	}else{
+		// Horizontal move
+		distance = abs(col_diff);
+		direction = 1 if col_diff > 0 else -1;
+		// Check all positions between start and end
+		int check_col;
+		for(int i = 1; i < distance; ++i){
+			check_col = start_col + (i * direction);
+			if((i % 2) == 1){ // odd positions should have opponent pieces
+				if(board[start_row][check_col] == EMPTY || board[start_row][check_col] == piece){
+					return false;
+				}
+			}else{ // even positions should be empty
+				if(board[start_row][check_col] != EMPTY){
+					return false;
+				}
+			}	
+		}	
+	}
+	// Distance must be even (jump is 2, 4, 6, etc.)
+	if((distance % 2) != 0){
+		return false;
+	}
+	return true;
 }
 
 /*
@@ -177,9 +292,9 @@ string find_opening_move(vector<vector<char>> board, string player){
 	
 	return NONE_STR;
 }
-/*
+
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
-	*
+	/*
 	 * For each possible move for the player, generate a resulting board,
 	 * call evaluate_tile_mobility_signed, and store:
 	 *   - 'move': move string
@@ -187,7 +302,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	 *   - 'end': (row, col)
 	 *   'eval_sum': sum of evaluation matrix after move
 	 * Returns a list of dicts, one per possible move.
-	 *
+	 */
 	
 	vec moves;
 	vector<pair<int, int>> directions = {
@@ -198,16 +313,34 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	}
 	char opponent = WHITE if(player == BLACK) else BLACK;
 
-	for(const auto& row : board){
-		for(const auto& col : row){
-			if(col){
-				// Current pos
+	for(int row = 0; row < SIZE; ++row){
+		for(int col = 0; col < SIZE; ++col){
+			if(board[row][col] == player[0]){
+				string start_coord = index_to_coord(row, col);
+				int row_offset;
+				int col_offset;
+				int end_row;
+				int end_col;
+				string end_coord;
+				string move_str;
+				for(const auto& direction : directions) {
+					row_offset = direction.first;
+					col_offset = direction.second;
+					end_row = row + row_offset;
+					end_col = col + col_offset;
+					string old_player = PLAYER;
+					PLAYER = player;
+					if(is_valid_move(board, row, col, end_row, end_col, player)){
+						end_coord = index_to_coord(end_row, end_col);
+						move_str = 	
+					}
+				}
 			}
 		}
 	}
 	
 }
-
+/*
 string find_best_move(vector<vector<char>> board, string player){
 	moves = get_all_move_evaluations(board, player);
 }
