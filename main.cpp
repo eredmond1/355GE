@@ -69,6 +69,19 @@ bool is_board_full(vector<vector<char>> board){
 	return true;
 }
 
+int count_empty(vector<vector<char>> board){
+	int total = 0;
+
+	for(const auto& row : board){
+		for(const auto& col : row){
+			if(col == EMPTY){
+				total++;
+			}
+		}
+	}
+	return total;
+}
+
 /*
  * Selects an opening move for black or white player given a full board
  * Params: board - A 2D vector of characters representing board pieces
@@ -86,11 +99,13 @@ string find_opening_move(vector<vector<char>> board, string player){
 			return "E5";
 		}
 	}
+	// Second move: exactly one empty square
+
 	return NONE;
 }
-
+/*
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
-	/*
+	*
 	 * For each possible move for the player, generate a resulting board,
 	 * call evaluate_tile_mobility_signed, and store:
 	 *   - 'move': move string
@@ -98,7 +113,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	 *   - 'end': (row, col)
 	 *   'eval_sum': sum of evaluation matrix after move
 	 * Returns a list of dicts, one per possible move.
-	 */
+	 *
 	
 	vec moves;
 	vector<pair<int, int>> directions = {
@@ -121,7 +136,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 string find_best_move(vector<vector<char>> board, string player){
 	moves = get_all_move_evaluations(board, player);
 }
-
+*/
 /*
  * Calls functions to pick a move depending if board is empty or not
  * Params: board - A 2D vector of characters representing board pieces
@@ -176,9 +191,13 @@ int main(int argc, char* argv[]) {
 	string o = find_opening_move(board, player);
 	cout << "Opening move: " << o << endl;
 	cout << "Type of move: " << typeid(o).name() << endl;
-	*/
+	
 	string my_move = choose_move(board, player);
 	cout << "Move: " << my_move << endl;
+	*/
 
+	//Testing count_empty
+	int count = count_empty(board);
+	cout << "Count: " << count << endl;
 	return 0;	
 }
