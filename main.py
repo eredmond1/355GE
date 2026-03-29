@@ -7,19 +7,14 @@ BLACK = 'B'
 WHITE = 'W'
 EMPTY = 'O'   # use whatever matches the board/checker
 SIZE = 8
-VALID_POSITIONS = {(r, c) for r in range(SIZE) for c in range(SIZE)}
-#TODO: this needs to be taken from the input
 PLAYER = "B"
-BE = "board_early.txt"
-BL = "board_late.txt"
-BM = "board_mid.txt"
 
 
 
 
 
 """
-This is going to load in the board from the txt file and clear a single space if full
+This is going to load in the board from the txt file
 """
 def load_board(filename):
     board = []
@@ -28,7 +23,6 @@ def load_board(filename):
             line = line.strip()
             if line:
                 board.append(list(line))
-    #board = remove_center_if_full(board)
     return board
 
 
@@ -91,26 +85,8 @@ this checks if a baord is full and will remove peace
 
 This is only going to be run when the boards is read in from the file 
 """
-#TODO: This is going to need to be changed to the correct possition
-# def remove_center_if_full(board):
-#     for row in range(SIZE):
-#         for col in range(SIZE):
-#             if board[row][col] == EMPTY:
-#                 return board  
-    
-    
-#     center_row = SIZE // 2
-#     center_col = SIZE // 2
-#     board[center_row][center_col] = EMPTY
-#     print("TRIGGERED")
-    
-#     return board
 def is_board_full(board):
-    for row in range(SIZE):
-        for col in range(SIZE):
-            if board[row][col] == EMPTY:
-                return False
-    return True
+    return count_empty(board) == 0
 
 
 def count_empty(board):
@@ -141,9 +117,9 @@ CHECKS
 """
 def is_valid_move(board, start_row, start_col, end_row, end_col, player):
     # check if coordinates are within bounds
-    if (start_row, start_col) not in VALID_POSITIONS:
+    if not (0 <= start_row < SIZE and 0 <= start_col < SIZE):
         return False
-    if (end_row, end_col) not in VALID_POSITIONS:
+    if not (0 <= end_row < SIZE and 0 <= end_col < SIZE):
         return False
     
     # check if start has a piece and end is empty
@@ -212,7 +188,7 @@ def find_opening_move(board, player):
         if player == BLACK:
             return "D5"
         else:
-            return "E5"
+            return "D4"
 
     # second move: exactly one empty square
     if count_empty(board) == 1:
@@ -263,7 +239,6 @@ def move_piece(board, move, player):
     
     # validate the move first
     if not is_valid_move(board, start_row, start_col, end_row, end_col, player):
-        print("Invalid move")
         return None
 
     piece = board[start_row][start_col]
@@ -355,12 +330,8 @@ def evaluate_tile_mobility_signed(board, player):
                 for row_offset, col_offset in directions:
                     end_row = row + row_offset
                     end_col = col + col_offset
-                    global PLAYER
-                    old_player = PLAYER
-                    PLAYER = piece
-                    if is_valid_move(board, row, col, end_row, end_col, piece):  # pass piece directly
+                    if is_valid_move(board, row, col, end_row, end_col, piece):
                         move_count += 1
-                    PLAYER = old_player
                 if piece == player:
                     mobility_matrix[row][col] = move_count
                 else:
@@ -392,9 +363,6 @@ def get_all_move_evaluations(board, player):
                 for row_offset, col_offset in directions:
                     end_row = row + row_offset
                     end_col = col + col_offset
-                    global PLAYER
-                    old_player = PLAYER
-                    PLAYER = player
                     if is_valid_move(board, row, col, end_row, end_col, player):
                         end_coord = index_to_coord(end_row, end_col)
                         move_str = format_move(start_coord, end_coord)
@@ -412,7 +380,6 @@ def get_all_move_evaluations(board, player):
                                     for opp_row_offset, opp_col_offset in directions:
                                         opp_end_row = opp_row + opp_row_offset
                                         opp_end_col = opp_col + opp_col_offset
-                                        PLAYER = opponent
                                         if is_valid_move(board_copy, opp_row, opp_col, opp_end_row, opp_end_col, opponent):
                                             opp_end = index_to_coord(opp_end_row, opp_end_col)
                                             opp_move_str = format_move(opp_start, opp_end)
@@ -421,7 +388,6 @@ def get_all_move_evaluations(board, player):
                                                 'start': (opp_row, opp_col),
                                                 'end': (opp_end_row, opp_end_col)
                                             })
-                        PLAYER = old_player
                         moves.append({
                             'move': move_str,
                             'start': (row, col),
@@ -429,7 +395,6 @@ def get_all_move_evaluations(board, player):
                             'eval_sum': eval_sum,
                             'replies': replies
                         })
-                    PLAYER = old_player
     return moves
 
 def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, player):
@@ -443,10 +408,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
     opponent = WHITE if player == BLACK else BLACK
 
     # Check for timeout
-    if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
-        if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
-            _ALPHABETA_TIMEOUT = True
-            return None, float('-inf') if is_maximizing else float('inf')
+    if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+        _ALPHABETA_TIMEOUT = True
+        return None, float('-inf') if is_maximizing else float('inf')
 
     if not moves:
         score = float('-inf') if is_maximizing else float('inf')
@@ -458,10 +422,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
         best_val = float('-inf')
         for entry in moves:
             # Check for timeout at each iteration
-            if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
-                if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
-                    _ALPHABETA_TIMEOUT = True
-                    break
+            if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+                _ALPHABETA_TIMEOUT = True
+                break
             score = entry['eval_sum']
 
             # Go deeper using the opponent's replies if we can
@@ -470,10 +433,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
                 move_piece(board_copy, entry['move'], player)
                 opp_moves = get_all_move_evaluations(board_copy, opponent)
                 _, score = alphabeta_on_evaluations(
-                    opp_moves, depth - 1, alpha, beta, False, board_copy, player
+                    opp_moves, depth - 1, alpha, beta, False, board_copy, opponent
                 )
-                # If timeout, break
-                if '_ALPHABETA_TIMEOUT' in globals() and _ALPHABETA_TIMEOUT:
+                if _ALPHABETA_TIMEOUT:
                     break
 
             if score > best_val:
@@ -490,10 +452,9 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
         best_val = float('inf')
         for entry in moves:
             # Check for timeout at each iteration
-            if '_ALPHABETA_START_TIME' in globals() and '_ALPHABETA_TIME_LIMIT' in globals():
-                if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
-                    _ALPHABETA_TIMEOUT = True
-                    break
+            if time.time() - _ALPHABETA_START_TIME > _ALPHABETA_TIME_LIMIT:
+                _ALPHABETA_TIMEOUT = True
+                break
             score = entry['eval_sum']
 
             if depth > 1 and entry['replies']:
@@ -503,8 +464,7 @@ def alphabeta_on_evaluations(moves, depth, alpha, beta, is_maximizing, board, pl
                 _, score = alphabeta_on_evaluations(
                     our_moves, depth - 1, alpha, beta, True, board_copy, player
                 )
-                # If timeout, break
-                if '_ALPHABETA_TIMEOUT' in globals() and _ALPHABETA_TIMEOUT:
+                if _ALPHABETA_TIMEOUT:
                     break
 
             if score < best_val:
@@ -523,6 +483,7 @@ def find_best_move(board, player):
     moves = get_all_move_evaluations(board, player)
     if not moves:
         return None
+    moves.sort(key=lambda x: x['eval_sum'], reverse=True)
     # Set up timing globals
     global _ALPHABETA_START_TIME, _ALPHABETA_TIME_LIMIT, _ALPHABETA_TIMEOUT
     _ALPHABETA_START_TIME = time.time()
@@ -533,15 +494,15 @@ def find_best_move(board, player):
     try:
         best_move, best_val = alphabeta_on_evaluations(
             moves,
-            depth=5,
+            depth=3,
             alpha=float('-inf'),
             beta=float('inf'),
             is_maximizing=True,
             board=board,
             player=player
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(e, file=sys.stderr)
     # If timeout, best_move may be None; fallback to first move
     if best_move is None and moves:
         best_move = moves[0]['move']
@@ -556,30 +517,25 @@ def evaluate_tile_safety(board, player):
     """
     safety_matrix = [[0 for _ in range(SIZE)] for _ in range(SIZE)]
     opponent = WHITE if player == BLACK else BLACK
-    directions = [
-        (-2, 0), (-4, 0), (-6, 0),  # up
-        (2, 0), (4, 0), (6, 0),     # down
-        (0, -2), (0, -4), (0, -6),  # left
-        (0, 2), (0, 4), (0, 6)      # right
-    ]
+    adjacent = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     for row in range(SIZE):
         for col in range(SIZE):
             piece = board[row][col]
             if piece == EMPTY:
                 safety_matrix[row][col] = 0
             elif piece == player or piece == opponent:
-                # Assume unsafe until proven safe
+                # Assume safe until proven unsafe
                 safe = 1
-                for row_offset, col_offset in directions:
-                    end_row = row + row_offset
-                    end_col = col + col_offset
-                    global PLAYER
-                    old_player = PLAYER
-                    PLAYER = opponent if piece == player else player
-                    # If opponent can jump here, it's unsafe
-                    if is_valid_move(board, end_row, end_col, row, col, PLAYER):
-                        safe = 0
-                    PLAYER = old_player
+                checker = opponent if piece == player else player
+                for dr, dc in adjacent:
+                    adj_row, adj_col = row + dr, col + dc
+                    land_row, land_col = row - dr, col - dc
+                    if (0 <= adj_row < SIZE and 0 <= adj_col < SIZE and
+                        0 <= land_row < SIZE and 0 <= land_col < SIZE):
+                        if board[adj_row][adj_col] == checker:
+                            if is_valid_move(board, adj_row, adj_col, land_row, land_col, checker):
+                                safe = 0
+                                break
                 if piece == player:
                     safety_matrix[row][col] = safe
                 else:
@@ -601,57 +557,24 @@ def evaluate_center_control(board, player):
             opponent_count += 1
     return player_count - opponent_count
 
-# def evaluate_board_average(board, player):
-#     """
-#     Returns the average of mobility, safety, and center control scores.
-#     """
-#     mobility_matrix = evaluate_tile_mobility_signed(board, player)
-#     mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
-#     safety_matrix = evaluate_tile_safety(board, player)
-#     safety_score = sum(val for rowm in safety_matrix for val in rowm)
-#     center_score = evaluate_center_control(board, player)
-#     return (mobility_score + safety_score + center_score) / 3
-
 def evaluate_board_weighted(board, player, w_mob=0.4, w_safe=0.4, w_center=0.2):
-    mobility_matrix = evaluate_tile_mobility_signed(board, player)
-    mobility_score = sum(val for rowm in mobility_matrix for val in rowm)
+    opponent = WHITE if player == BLACK else BLACK
+    directions = [(-2,0),(-4,0),(-6,0),(2,0),(4,0),(6,0),(0,-2),(0,-4),(0,-6),(0,2),(0,4),(0,6)]
+
+    mobility = 0
+    for row in range(SIZE):
+        for col in range(SIZE):
+            piece = board[row][col]
+            if piece == EMPTY:
+                continue
+            for dr, dc in directions:
+                if is_valid_move(board, row, col, row+dr, col+dc, piece):
+                    mobility += 1 if piece == player else -1
+
     safety_matrix = evaluate_tile_safety(board, player)
-    safety_score = sum(val for rowm in safety_matrix for val in rowm)
+    safety_score = sum(val for row in safety_matrix for val in row)
     center_score = evaluate_center_control(board, player)
-    return w_mob * mobility_score + w_safe * safety_score + w_center * center_score
-
-# def find_move_test():
-#     board = load_board(BE)
-#     print_board(board)
-#     print("\n" + "--------------------------------------"+ "\n")
-#     move = find_valid_move(board)
-#     print(move + "\n")
-#     move_piece(board, move)
-#     print_board(board)
-    
-
-
-def state1():
-    board = load_board(BE)
-    print_board(board)
-    
-def state2():
-    board = load_board(BM)
-    # print_board(board)
-    
-    # Evaluate ALL pieces (both BLACK and WHITE)
-    moves = get_all_move_evaluations(board, PLAYER)
-    print(moves)
-    
-    print("\n" + "--------------------------------------"+ "\n")
-   
-    # print_board(eval_all)
-    
-    # Calculate totals
-
-def convert_move_format(move):
-    start, end = parse_move(move)
-    return f"{start}-{end}"
+    return w_mob * mobility + w_safe * safety_score + w_center * center_score
 
 def choose_move(board, player):
     opening_move = find_opening_move(board, player)
@@ -663,10 +586,6 @@ def choose_move(board, player):
     return find_best_move(board, player)  #  was find_valid_move(board)
       
 def main():
-    # state1()
-    #state2()
-    #find_move_test()
-
     # check for correct arguments
     if len(sys.argv) != 3:
         return
@@ -677,16 +596,12 @@ def main():
     global PLAYER
     PLAYER = player
 
-    # load board
     board = load_board(board_file)
-    # print_board(board )
-
 
     # Track number of opening removals (first two moves are removals)
     opening_removals = 0
 
     my_move = choose_move(board, player)
-    # Check if this is an opening removal (removal moves have no '-')
     if my_move is not None and '-' not in my_move:
         opening_removals += 1
     if my_move is None:
@@ -696,53 +611,33 @@ def main():
     print(my_move, flush=True)
     move_piece(board, my_move, player)
 
-
     while True:
-        while True:
-            try:
-                opponent_move = input()
-            except EOFError:
-                sys.exit(0)
+        try:
+            opponent_move = input()
+        except EOFError:
+            sys.exit(0)
 
-            if not opponent_move:
-                sys.exit(0)
+        if not opponent_move:
+            sys.exit(0)
 
-            if opponent_move.strip() == "you win":
-                sys.exit(0)
+        if opponent_move.strip() == "you win":
+            sys.exit(0)
 
-            opponent = WHITE if player == BLACK else BLACK
-            move_piece(board, opponent_move, opponent)
+        opponent = WHITE if player == BLACK else BLACK
+        move_piece(board, opponent_move, opponent)
 
-            # Check if opponent's move was an opening removal
-            if '-' not in opponent_move:
-                opening_removals += 1
+        if '-' not in opponent_move:
+            opening_removals += 1
 
-            # Only check for valid moves after both opening removals are done
-            if opening_removals >= 2:
-                pass  # ...existing code...
+        my_move = choose_move(board, player)
+        if my_move is not None and opening_removals < 2 and '-' not in my_move:
+            opening_removals += 1
+        elif my_move is None:
+            print("you win", flush=True)
+            sys.exit(0)
 
-            my_move = choose_move(board, player)
-            # If still in opening phase, allow removal moves
-            if my_move is not None and opening_removals < 2 and '-' not in my_move:
-                opening_removals += 1
-            elif my_move is None:
-                print("you win", flush=True)
-                sys.exit(0)
+        print(my_move, flush=True)
+        move_piece(board, my_move, player)
 
-            print(my_move, flush=True)
-            move_piece(board, my_move, player)
-
-        # print(my_move, flush=True)
-        # move_piece(board, my_move, player)
-
-    
-    
-    
-    
-        
-    
-        
-        
-        
 if __name__ == "__main__":
     main()
