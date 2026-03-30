@@ -98,7 +98,8 @@ string format_move(string start, string end){
 
 /*
  * Parses first coordinate from move string
- * Param: move_string
+ * Param: move_string - String representing movement between two coordinates
+ * Return: String representing the first (starting) coordinate
  */
 string parse_move_start(string move_string){
 	size_t pos = move_string.find('-');
@@ -107,6 +108,21 @@ string parse_move_start(string move_string){
 		return move_string;
 	}else{
 		return move_string.substr(0, pos);
+	}
+}
+
+/*
+ * Parses second coordinate from move string
+ * Param: move_string - String representing movement between two coordinates
+ * Return: String representing the second (ending) coordinate
+ */
+string parse_move_end(string move_string){
+	size_t pos = move_string.find('-');
+
+	if(pos == npos){
+		return move_string;
+	}else{
+		return move_string.substr(pos + 1);
 	}
 }
 
