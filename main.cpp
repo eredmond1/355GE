@@ -120,7 +120,7 @@ string parse_move_end(string move_string){
 	size_t pos = move_string.find('-');
 
 	if(pos == npos){
-		return move_string;
+		return NONE_STR;
 	}else{
 		return move_string.substr(pos + 1);
 	}
@@ -158,6 +158,23 @@ int count_empty(vector<vector<char>> board){
 		}
 	}
 	return total;
+}
+
+/*
+ * Determines if a piece needs to be removed and certain coordinates and does so
+ * Params: board - A 2D vector of characters representing the game board
+ *         coord - A string representing chess coordinates
+ * Return: False if coordinates is already empty. Otherwise, remove the piece
+ *         and return true
+ */
+bool apply_removal_move(vector<vector<char>> board, string coord){
+	int row = coord_to_index_row(coord);
+	int col = coord_to_index_col(coord);
+	if(board[row][col] == EMPTY){
+		return false
+	}
+	board[row][col] = EMPTY;
+	return true;
 }
 
 /*
@@ -327,7 +344,13 @@ string find_opening_move(vector<vector<char>> board, string player){
  *
  */
 WHAT move_piece(vector<vector<char> board, string move, string player){
+	string start = parse_move_start(move);
+	string end = parse_move_end(move);
 	
+	// Opening removal move support
+	if(end == NONE_STR){
+		
+	}	
 }
 
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
