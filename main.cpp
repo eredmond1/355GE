@@ -2,8 +2,12 @@
  * Name: main.cpp
  * Purpose: Refactored version of Koname player from Python to C++
  * Author(s): Nolan Schlacht
- * Last Modified: 28/03/26
- */
+ * Last Modified: 29/03/26
+ *#############################################################################
+ * IMPORTANT: IF THIS MESSAGE IS PRESENT, THEN THE CODE HAS NOT BEEN FULLY
+ * ERROR CHECKED AFTER REFACTOR. CURRENT VERSION IS NOT VIABLE YET.
+ *#############################################################################
+ *****************************************************************************/
 
 // Standard libraries
 #include <iostream>
@@ -240,7 +244,7 @@ bool is_valid_move(vector<vecor<char>> board, int start_row, int start_col, int 
 	if(row_diff != 0){
 		// Vertical move
 		distance = abs(row_diff);
-		direction = 1 if row_diff > 0 else -1;
+		direction = (row_diff > 0) ? 1 : -1;
 		// Check all positions between start and end
 		int check_row;
 		for(int i = 1; i < distance; ++i){
@@ -258,7 +262,7 @@ bool is_valid_move(vector<vecor<char>> board, int start_row, int start_col, int 
 	}else{
 		// Horizontal move
 		distance = abs(col_diff);
-		direction = 1 if col_diff > 0 else -1;
+		direction = (col_diff > 0) ? 1 : -1;
 		// Check all positions between start and end
 		int check_col;
 		for(int i = 1; i < distance; ++i){
@@ -341,16 +345,63 @@ string find_opening_move(vector<vector<char>> board, string player){
 }
 
 /*
- *
+ * Moves a board piece and removes and captured pieces
+ * Params: board - A 2D vector of characters representing the board
+ *         move - A string containing the start and end positions of a piece in
+ *                motion
+ *         player - String representing the player color
+ * Return: Returns a string representing the new coordinates of the moved piece
  */
-WHAT move_piece(vector<vector<char> board, string move, string player){
+string move_piece(vector<vector<char> board, string move, string player){
 	string start = parse_move_start(move);
 	string end = parse_move_end(move);
 	
 	// Opening removal move support
 	if(end == NONE_STR){
-		
+		if(apply_removal_move(board, start)){
+			return start
+		}
+		return NONE_STR;	
 	}	
+	int start_row = coord_to_index_row(start);
+	int start_col = coord_to_index_col(start);
+	int end_row = coord_to_index_row(end);
+	int end_col = coord_to_index_col(end);
+
+	// Validate the first move
+	if(!is_valid_move(board, start_row, start_col, end_row, end_col, player)){
+		cout << "Invalid move" << endl;
+		return NONE_STR
+	}
+	char piece = board[start_row][start_col];
+
+	// Move the piece
+	board[end_row][end_col] = piece;
+	board[start_row][start_col] = 'O';
+
+	// Remove jumped pieces
+	int row_diff = end_row - start_row;
+	int col_diff = end_col - start_col;
+	int direction;
+	int distance
+
+	if(row_diff != 0){
+		// Vertical jumps
+		direction = (row_diff > 0) ? 1 : -1;
+		distance = abs(row_diff);
+		for(int i = 1; i < distance; i += 2){
+			board[start_row + (i * direction)][start_col] = 'O';
+		}
+	} else {
+		// Horizontal distance
+		direction = (col_diff > 0) ? 1 : -1;
+		distance = abs(col_diff);
+		for(int i = 1; i < distance; i += 2){
+			board[start_row][start_col + (i * direction)] = 'O';
+		}
+	}
+	
+	return index_to_coord(end_row, end_col);
 }
 
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
