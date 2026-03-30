@@ -20,7 +20,10 @@
 #include <cstdlib>
 #include <typeinfo> // Remove at end
 
+// Nmaespace and type aliases
 using namespace std;
+// Will use this once code working to simplify
+//using Board = std::vector<std::vector<char>>;
 
 // Global variables
 char BLACK = 'B';
@@ -347,12 +350,13 @@ string find_opening_move(vector<vector<char>> board, string player){
 /*
  * Moves a board piece and removes and captured pieces
  * Params: board - A 2D vector of characters representing the board
+ *                 and must be passed by reference to modify
  *         move - A string containing the start and end positions of a piece in
  *                motion
  *         player - String representing the player color
  * Return: Returns a string representing the new coordinates of the moved piece
  */
-string move_piece(vector<vector<char> board, string move, string player){
+string move_piece(vector<vector<char>& board, string move, string player){
 	string start = parse_move_start(move);
 	string end = parse_move_end(move);
 	
@@ -404,6 +408,40 @@ string move_piece(vector<vector<char> board, string move, string player){
 	return index_to_coord(end_row, end_col);
 }
 
+/*
+ *
+ */
+vector<vector<int>> evaluate_tile_mobility_signed(vector<vector<char>> board, string player){
+	/*
+	 * Returns an 8x8 matrix:
+	 * - Your pieces: positive move count
+	 * - Opponent pieces: negative move count
+	 * - Empty: 0
+	 */
+	vector<vector<int>> mobility_matrix(SIZE, vector<int>(SIZE, 0));
+	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
+
+	vector<pair<int, int>> directions = {
+		{-2, 0}, {-4, 0}, {-6, 0},
+		{2, 0}, {4, 0}, {6, 0},
+		{0, -2}, {0, -4}, {0, -6},
+		{0, 2}, {0, 4}, {0, 6}
+	}
+
+	char piece;
+
+	for(int row = 0; row < SIZE; ++row){
+		for(int col = 0; col < SIZE; ++col){
+			piece = board[row][col];
+			if(piece == EMPTY){
+				mobility_matrix[row][col] = 0;
+			} else if(piece == player || piece == opponent){
+				// Current progress (line 354 in python file)	
+			}	
+		}
+	}
+}
+
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	/*
 	 * For each possible move for the player, generate a resulting board,
@@ -422,31 +460,38 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 		{0, -2}, {0, -4}, {0, -6},
 		{0, 2}, {0, 4}, {0, 6}
 	}
-	char opponent = WHITE if(player == BLACK) else BLACK;
+	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
+
+	string start_coord = index_to_coord(row, col);
+	int row_offset;
+	int col_offset;
+	int end_row;
+	int end_col;
+	int throwaway;
+	int eval_sum;
+	string end_coord;
+	string move_str;
+	string old_player;
+	vector<vector<char>> board_copy;
 
 	for(int row = 0; row < SIZE; ++row){
 		for(int col = 0; col < SIZE; ++col){
 			if(board[row][col] == player[0]){
-				string start_coord = index_to_coord(row, col);
-				int row_offset;
-				int col_offset;
-				int end_row;
-				int end_col;
-				string end_coord;
-				string move_str;
-				vector<vector<char>> board_copy;
+				start_coord = index_to_coord(row, col);
 				for(const auto& direction : directions) {
 					row_offset = direction.first;
 					col_offset = direction.second;
 					end_row = row + row_offset;
 					end_col = col + col_offset;
-					string old_player = PLAYER;
+					old_player = PLAYER;
 					PLAYER = player;
 					if(is_valid_move(board, row, col, end_row, end_col, player)){
 						end_coord = index_to_coord(end_row, end_col);
 						move_str = format_move(start_coord, end_coord);
 						board_copy = board;
-
+						throwaway = move_piece(board_copy, move_str, player);
+						// Evaluate the resulting board
+						eval_sum = evaluate_board_weighted(board_copy, player);
 					}
 				}
 			}
@@ -459,6 +504,14 @@ string find_best_move(vector<vector<char>> board, string player){
 	moves = get_all_move_evaluations(board, player);
 }
 */
+
+/*
+ *
+ */
+DOUBORINT evaluate_board_weighted(vector<vector<char>> board, string player, w_mob = 0.4, w_safe = 0.4, w_center = 0.2){
+		mobility_matrix = evaluate_tile_mobility_signed(board, player);
+}
+
 /*
  * Calls functions to pick a move depending if board is empty or not
  * Params: board - A 2D vector of characters representing board pieces
