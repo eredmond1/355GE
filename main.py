@@ -188,7 +188,7 @@ def find_opening_move(board, player):
         if player == BLACK:
             return "D5"
         else:
-            return "D4"
+            return "E5"
 
     # second move: exactly one empty square
     if count_empty(board) == 1:
@@ -494,7 +494,7 @@ def find_best_move(board, player):
     try:
         best_move, best_val = alphabeta_on_evaluations(
             moves,
-            depth=3,
+            depth=5,
             alpha=float('-inf'),
             beta=float('inf'),
             is_maximizing=True,
