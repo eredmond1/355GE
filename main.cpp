@@ -409,7 +409,10 @@ string move_piece(vector<vector<char>& board, string move, string player){
 }
 
 /*
- *
+ * Generate a matrix representing mobility of a pieces on the board
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ * Return: A 2D vector of integers representing available hops to pieces
  */
 vector<vector<int>> evaluate_tile_mobility_signed(vector<vector<char>> board, string player){
 	/*
@@ -426,9 +429,12 @@ vector<vector<int>> evaluate_tile_mobility_signed(vector<vector<char>> board, st
 		{2, 0}, {4, 0}, {6, 0},
 		{0, -2}, {0, -4}, {0, -6},
 		{0, 2}, {0, 4}, {0, 6}
-	}
+	};
 
 	char piece;
+	int move_count;
+	int end_row;
+	int end_col;
 
 	for(int row = 0; row < SIZE; ++row){
 		for(int col = 0; col < SIZE; ++col){
@@ -436,10 +442,23 @@ vector<vector<int>> evaluate_tile_mobility_signed(vector<vector<char>> board, st
 			if(piece == EMPTY){
 				mobility_matrix[row][col] = 0;
 			} else if(piece == player || piece == opponent){
-				// Current progress (line 354 in python file)	
+				move_count = 0;	
+				for(const auto& [row_offset, col_offset] : directions){
+					end_row = row + row_offset;
+					end_col = col + col_offset;
+					if(is_valid_move(board, row, col, end_row, end_col, piece)){
+						move_count += 1;
+					}
+				}
+				if(piece == player[0]){
+					mobility_matrix[row][col] = move_count;
+				} else {
+					mobility_matrix[row][col] = (-1 * move_count);
+				}
 			}	
 		}
 	}
+	return mobility_matrix;
 }
 
 WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
@@ -459,7 +478,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 		{2, 0}, {4, 0}, {6, 0},
 		{0, -2}, {0, -4}, {0, -6},
 		{0, 2}, {0, 4}, {0, 6}
-	}
+	};
 	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
 
 	string start_coord = index_to_coord(row, col);
@@ -506,10 +525,64 @@ string find_best_move(vector<vector<char>> board, string player){
 */
 
 /*
+ * Gets the number of player pieces in the center minus number of opponent pieces
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ * Return: Integer representing diff of player and opponent pieces in the center
+ */
+int evaluate_center_control(vector<vector<char>> board, string player){
+	vector<pair<int, int>> center_coords = {
+		{3, 3}, {3, 4}, {4, 3}, {4, 4}
+	}; // D4, D5, E4, E5
+	int player_count = 0;
+	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
+	int opponent_count = 0;
+	for(const auto& [row, col] : center_coords){
+		if(board[row][col] == player[0]){
+			player_count += 1;
+		} else if(board[row][col] == opponent){
+			opponent_count += 1;
+		}
+	}
+	return (player_count - opponent_count);
+}
+
+/*
  *
  */
-DOUBORINT evaluate_board_weighted(vector<vector<char>> board, string player, w_mob = 0.4, w_safe = 0.4, w_center = 0.2){
-		mobility_matrix = evaluate_tile_mobility_signed(board, player);
+DOUBORINT evaluate_board_weighted(vector<vector<char>> board, string player, double w_mob = 0.4, double w_safe = 0.4, double w_center = 0.2){
+	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
+	vector<pair<int, int>> directions = {
+		{-2, 0}, {-4, 0}, {-6, 0},
+		{2, 0}, {4, 0}, {6, 0},
+		{0, -2}, {0, -4}, {0, -6},
+		{0, 2}, {0, 4}, {0, 6}
+	};
+	int mobility = 0;
+	char piece;
+
+	for(int row = 0; row < SIZE; ++row){
+		for(int col = 0; col < SIZE; ++col){
+			piece = board[row][col];
+			if(piece == EMPTY){
+				continue;
+			}
+			for(const auto& [dr, dc] : directions){
+				if(is_valid_move(board, row, col, (row + dr), (col + dc), piece)){
+					mobility += (piece == player[0]) ? 1 : -1;
+				}
+			}
+		}
+	}
+	
+	vector<vector<int>> mobility_matrix = evaluate_tile_mobility_signed(board, player);
+	int safety_score;
+	for(const auto& r : safety_matrix){
+		for(int v : r){
+			safety_score += v;
+		}
+	}
+	center_score = 
 }
 
 /*
