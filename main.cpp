@@ -18,6 +18,7 @@
 #include <utility>
 #include <cctype>
 #include <cstdlib>
+#include <unorder_map>
 #include <typeinfo> // Remove at end
 
 // Nmaespace and type aliases
@@ -36,6 +37,20 @@ string BE = "board_early.txt";
 string BL = "board_late.txt";
 string BM = "board_mid.txt";
 string NONE_STR = "None";
+
+struct Replies {
+	string move;
+	pair<int, int> start;
+	pair<int, int> end;
+}
+
+struct Move{
+	string move;
+	pair<int, int> start;
+	pair<int, int> end;
+	double eval_sum;
+	Replies replies;
+}
 
 /*
  * Loads Koane board from text file into a vector of character vectors.
@@ -461,7 +476,13 @@ vector<vector<int>> evaluate_tile_mobility_signed(vector<vector<char>> board, st
 	return mobility_matrix;
 }
 
-WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
+/*
+ * Gather a collection of structs holding all possible on the board
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ * Return: A vector of Move structs representing data on all possible moves
+ */
+vector<Moves> get_all_move_evaluations(vector<vector<char>> board, string player){
 	/*
 	 * For each possible move for the player, generate a resulting board,
 	 * call evaluate_tile_mobility_signed, and store:
@@ -472,7 +493,7 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	 * Returns a list of dicts, one per possible move.
 	 */
 	
-	vec moves;
+	vector<Moves> moves;
 	vector<pair<int, int>> directions = {
 		{-2, 0}, {-4, 0}, {-6, 0},
 		{2, 0}, {4, 0}, {6, 0},
@@ -492,6 +513,12 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 	string move_str;
 	string old_player;
 	vector<vector<char>> board_copy;
+	double eval_sum;
+	string opp_start;
+	int opp_end_row;
+	int opp_end_col;
+	string opp_end;
+	string opp_move_str;
 
 	for(int row = 0; row < SIZE; ++row){
 		for(int col = 0; col < SIZE; ++col){
@@ -511,18 +538,38 @@ WHAT get_all_move_evaluations(vector<vector<char>> board, string player){
 						throwaway = move_piece(board_copy, move_str, player);
 						// Evaluate the resulting board
 						eval_sum = evaluate_board_weighted(board_copy, player);
+						// Now, generate all possible opponent replies from current board state
+						vector<Replies> replies;
+						for(int opp_row = 0; opp_row < SIZE; ++opp_row){
+							for(int opp_col = 0; opp_col < SIZE; ++opp_col){
+								if(board_copy[opp_row][opp_col] == opponent){
+									opp_start = index_to_coord(opp_row, opp_col);
+									for(const auto& [opp_row_offset, opp_col_offset] : directions){
+										opp_end_row = opp_row + opp_row_offset;
+										opp_end_col = opp_col + opp_col_offset;
+										if(is_valid_move(board_copy, opp_row, opp_col, opp_end_row, opp_end_col, opponent)){
+											opp_end = index_to_coord(opp_end_row, opp_end_col);
+											opp_move_str = format_move(opp_start, opp_end);
+											replies.push_back({opp_move_str, <opp_row, opp_col>, <opp_end_row, opp_end_col>});
+										}
+									}
+								}
+							}
+						}
+						moves.push_back({move_str, <row, col>, <end_row, end_col>, eval_sum, replies});
 					}
 				}
 			}
 		}
 	}
+	return moves;
 	
 }
-/*
+
 string find_best_move(vector<vector<char>> board, string player){
-	moves = get_all_move_evaluations(board, player);
+	vector<Moves> moves = get_all_move_evaluations(board, player);
 }
-*/
+
 
 /*
  * Gets the number of player pieces in the center minus number of opponent pieces
@@ -548,9 +595,15 @@ int evaluate_center_control(vector<vector<char>> board, string player){
 }
 
 /*
- *
+ * Provides a weight for the board based off of evaluation functions
+ * Params: board - A 2D vector of characters representing board pieces
+ *         player - String representing the color of player pieces
+ *         w_mob - Tailored weight value for mobility eval
+ *         w_safe - Tailored weight value for piece safety
+ *         w_center - Tailored weight value for center control
+ * Return Double representing evaluation score
  */
-DOUBORINT evaluate_board_weighted(vector<vector<char>> board, string player, double w_mob = 0.4, double w_safe = 0.4, double w_center = 0.2){
+double evaluate_board_weighted(vector<vector<char>> board, string player, double w_mob = 0.4, double w_safe = 0.4, double w_center = 0.2){
 	char opponent = (player[0] == BLACK) ? WHITE : BLACK;
 	vector<pair<int, int>> directions = {
 		{-2, 0}, {-4, 0}, {-6, 0},
@@ -582,7 +635,8 @@ DOUBORINT evaluate_board_weighted(vector<vector<char>> board, string player, dou
 			safety_score += v;
 		}
 	}
-	center_score = 
+	center_score = evaluate_center_control(board, player);
+	return (w_mob * mobility + w_safe * safety_score + w_center * center_score);
 }
 
 /*
