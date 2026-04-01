@@ -19,6 +19,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <unorder_map>
+#include <algorithm>
+#include <chrono>
+#include <limits>
 #include <typeinfo> // Remove at end
 
 // Nmaespace and type aliases
@@ -37,6 +40,9 @@ string BE = "board_early.txt";
 string BL = "board_late.txt";
 string BM = "board_mid.txt";
 string NONE_STR = "None";
+chrono::steady_clock::time_point _ALPHABETA_START_TIME;
+double _ALPHABETA_TIME_LIMIT = 10.0;
+bool _ALPHABETA_TIMEOUT = false;
 
 struct Replies {
 	string move;
@@ -50,6 +56,26 @@ struct Move{
 	pair<int, int> end;
 	double eval_sum;
 	Replies replies;
+}
+
+/*
+ * Start alphabeta timer
+ */
+void start_alphabeta_timer(){
+	_ALPHABETA_START_TIMER = chrono::steady_clock::now();
+	_ALPHABETA_TIMEOUT = false;
+}
+
+/*
+ * Checker if timer exceeded
+ */
+bool check_alphabeta_timeout() {
+	auto now = chrono::steady_clock::now();
+	chrono::duration<double> elapsed = now - _ALPHABETA_START_TIME;
+	if(elapsed.count() >= _ALPHABETA_TIME_LIMIT){
+		_ALPHABETA_TIMEOUT = true;
+	}
+	return _ALPHABETA_TIMEOUT;
 }
 
 /*
@@ -566,8 +592,21 @@ vector<Moves> get_all_move_evaluations(vector<vector<char>> board, string player
 	
 }
 
+/*
+ *
+ */
 string find_best_move(vector<vector<char>> board, string player){
 	vector<Moves> moves = get_all_move_evaluations(board, player);
+	if(moves.empty()){
+		return NONE_STR;
+	}
+	sort(moves.begin(), moves.end(), [](const Move &a, const Move &b){
+		return a.eval_sum > b.eval_sum;
+	});
+	// Note: setup for timing moved
+	string best_move = NONE_STR;
+	double best_val = -numeric_limits<<double>::infinity();
+	// Current position
 }
 
 
